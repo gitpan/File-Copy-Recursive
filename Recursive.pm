@@ -11,7 +11,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -114,7 +114,7 @@ returns true or false, for true in scalar context it returns the number of files
 In list context it returns the number of files and directories, number of directories only, depth level traversed.
 
   my $num_of_files_and_dirs = dircopy($orig,$new);
-  my($num_of_files_and_dirs,$num_of_dirs,$depth_traversed) = dricopy($orig,$new);
+  my($num_of_files_and_dirs,$num_of_dirs,$depth_traversed) = dircopy($orig,$new);
 
 =head2 rcopy()
 
