@@ -1,0 +1,6 @@
+Revision history for Perl extension File::Copy::Recursive.
+
+0.01  Sun Dec  5 16:04:10 2004
+	- original version; created by h2xs 1.22 with options
+		-AXc -n File::Copy::Recursive
+
