@@ -1,4 +1,7 @@
 Revision history for Perl extension File::Copy::Recursive.
+0.02  Tue Dec  7 06:45:42 2004
+	- added documentation about return values that was left out
+	- changed return pardigm for fcopy() so if rcopy() was called in list context on a file you wouldn't get uninitialized value warnings.
 
 0.01  Sun Dec  5 16:04:10 2004
 	- original version; created by h2xs 1.22 with options

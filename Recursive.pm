@@ -11,12 +11,16 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
 
-sub fcopy { copy(@_) or return;chmod scalar((stat($_[0]))[2]), $_[1] if $KeepMode; }
+sub fcopy { 
+   copy(@_) or return;
+   chmod scalar((stat($_[0]))[2]), $_[1] if $KeepMode;
+   return wantarray ? (1,0,0) : 1; # use 0's incase they do math on them and in case rcopy() is called in list context = no uninit val warnings 
+}
 
 sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
 
@@ -25,7 +29,7 @@ sub dircopy {
    croak "$_[0] is not a directory" if !-d $_[0];
    croak "$_[1] is not a directory" if -e $_[1] && !-d $_[1];
    mkdir $_[1] or return if !-d $_[1];
-
+   my $baseend = $_[1];
    my $level = 0;
    my $filen = 0;
    my $dirn = 0;
@@ -33,6 +37,8 @@ sub dircopy {
    my $recurs; #must be my()ed before sub {} since it calls itself
    $recurs =  sub {
       my ($str,$end,$buf) = @_;
+      $filen++ if $end eq $baseend; 
+      $dirn++ if $end eq $baseend;
       mkdir $end or return if !-d $end;
       chmod scalar((stat($str))[2]), $end if $KeepMode;
       if($MaxDepth && $MaxDepth =~ m/^\d+$/ && $level >= $MaxDepth) {
@@ -94,6 +100,7 @@ None by default. But you can export all the functions as in the example above.
 This function uses File::Copy's copy() function to copy a file but not a directory.
 One difference to File::Copy::copy() is that fcopy attempts to preserve the mode (see Preserving Mode below)
 The optional $buf in the synopsis if the same as File::Copy::copy()'s 3rd argument
+returns the same as File::Copy::copy() in scalar context and 1,0,0 in list context to accomidate rcopy()'s list context on regular files. (See below for more info)
 
 =head2 dircopy()
 
@@ -103,9 +110,17 @@ It attempts to preserve the mode (see Preserving Mode below) and
 by default it copies all the way down into the directory, (see Managing Depth) below.
 If a directory is not specified it croaks just like fcopy croaks if its not a file that is specified.
 
+returns true or false, for true in scalar context it returns the number of files and directories copied,
+In list context it returns the number of files and directories, number of directories only, depth level traversed.
+
+  my $num_of_files_and_dirs = dircopy($orig,$new);
+  my($num_of_files_and_dirs,$num_of_dirs,$depth_traversed) = dricopy($orig,$new);
+
 =head2 rcopy()
 
 This function will allow you to specify a file *or* directory. It calls fcopy() if its a file and dircopy() if its a directory.
+If you call rcopy() (or fcopy() for that matter) on a file in list context, the values will be 1,0,0 since no directories and no depth are used. 
+This is important becasue if its a directory in list context and there is only the initial directory the return value is 1,1,1.
 
 =head2 Preserving Mode
 
@@ -121,7 +136,6 @@ You can set the maximum depth a directory structure is recursed by setting:
 to a whole number greater than 0.
 
 =head1 SEE ALSO
-
 
  L<File::Copy> L<File::Spec>
 
