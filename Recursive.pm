@@ -1,6 +1,5 @@
 package File::Copy::Recursive;
 
-use 5.008001;
 use strict;
 use warnings;
 
@@ -11,7 +10,8 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.03';
+our $VERSION = '0.04';
+sub VERSION { $VERSION; }
 
 our $MaxDepth = 0;
 our $KeepMode = 1;

@@ -1,4 +1,9 @@
 Revision history for Perl extension File::Copy::Recursive.
+
+0.04 Tue Jan 18 20:59:44 2005 
+	- added File::Copy::Recursive::VERSION(), not sure why I missed it before ;p
+	- removed use 5.008001; since its not dependant on any version
+ 
 0.03  Mon Jan 17 19:11:19 2005
 	- fixed documentation misspelling
 
