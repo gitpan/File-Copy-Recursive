@@ -1,6 +1,9 @@
 Revision history for Perl extension File::Copy::Recursive.
 
-0.04 Tue Jan 18 20:59:44 2005 
+0.05  Mon Jan 24 19:10:50 2005
+	- removed Makefile.PL perl version restriction
+
+0.04  Tue Jan 18 20:59:44 2005 
 	- added File::Copy::Recursive::VERSION(), not sure why I missed it before ;p
 	- removed use 5.008001; since its not dependant on any version
  
