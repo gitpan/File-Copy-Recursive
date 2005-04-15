@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.06  Fri Apr 15 11:25:27 2005
+        - cleaned up Makefile.PL
+        - added symlink preservation support (Thanks to Troy Goodson for pointing out that need)
+
 0.05  Mon Jan 24 19:10:50 2005
 	- removed Makefile.PL perl version restriction
 

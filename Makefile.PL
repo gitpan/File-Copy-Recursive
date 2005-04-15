@@ -1,11 +1,13 @@
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
+
 WriteMakefile(
     NAME              => 'File::Copy::Recursive',
-    VERSION_FROM      => 'Recursive.pm', # finds $VERSION
-    PREREQ_PM         => {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'Recursive.pm', # retrieve abstract from module
+    VERSION_FROM      => 'Recursive.pm',
+    PREREQ_PM         => { 
+        File::Copy => 0,
+        File::Spec => 0
+    },
+    ($] >= 5.005 ?     
+      (ABSTRACT_FROM  => 'Recursive.pm',
        AUTHOR         => 'Daniel Muey <http://drmuey.com/cpan_contact.pl>') : ()),
 );

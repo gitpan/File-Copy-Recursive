@@ -10,15 +10,20 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 sub VERSION { $VERSION; }
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
+our $CopyLink = eval { symlink '',''; 1 } || 0;
 
 sub fcopy { 
-   copy(@_) or return;
-   chmod scalar((stat($_[0]))[2]), $_[1] if $KeepMode;
+   if(-l $_[0] && $CopyLink) {
+      symlink readlink(shift()), shift() or return;
+   } else {  
+      copy(@_) or return;
+      chmod scalar((stat($_[0]))[2]), $_[1] if $KeepMode;
+   }
    return wantarray ? (1,0,0) : 1; # use 0's incase they do math on them and in case rcopy() is called in list context = no uninit val warnings 
 }
 
@@ -59,6 +64,8 @@ sub dircopy {
             $recurs->($org,$new) if !defined $buf;
             $filen++;
             $dirn++;
+         } elsif(-l $org && $CopyLink) {
+            symlink readlink($org), $new or return;
          } else {
             copy($org,$new,$buf) or return if defined $buf;
             copy($org,$new) or return if !defined $buf;
@@ -134,6 +141,20 @@ to false;
 You can set the maximum depth a directory structure is recursed by setting:
   $File::Copy::Recursive::MaxDepth 
 to a whole number greater than 0.
+
+=head2 SymLinks
+
+If your system supports symlinks then symlinks will be copied as symlinks instead of as the target file.
+Perl's symlink() is used instead of File::Copy's copy()
+You can customize this behavior by setting $File::Copy::Recursive::CopyLink to a true or false value.
+It is already set to true or false dending on your system's support of symlinks so you can check it with an if statement to see how it will behave:
+
+
+    if($File::Copy::Recursive::CopyLink) {
+        print "Symlinks will be preserved\n";
+    } else {
+        print "Symlinks will not be preserved because your system does not support it\n";
+    }
 
 =head1 SEE ALSO
 
