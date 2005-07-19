@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 sub VERSION { $VERSION; }
 
 our $MaxDepth = 0;
@@ -75,7 +75,7 @@ sub dircopy {
       }
    };
 
-   $recurs->(@_);
+   $recurs->(@_) or return;
    return ($filen,$dirn,$level) if wantarray;
    return $filen;
 }
