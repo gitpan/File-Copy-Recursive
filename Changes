@@ -1,5 +1,8 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.08  Fri Jul 29 14:35:44 2005
+	- fixed side effect of 0.07 not returning properly
+
 0.07  Mon Jul 18 18:32:36 2005
         - changed dircopy to return if subsequent copy fails (IE liek permission denied) so that "or [warn|die] $!" will work recursively also
  
