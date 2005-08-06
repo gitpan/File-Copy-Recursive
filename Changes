@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.10  Sat Aug  6 17:01:12 2005
+	- fixed indent in "SEE ALSO" POD that made it render badly	
+	- Added $PFSCheck
+
 0.09  Fri Aug  5 18:59:11 2005
 	- made dircopy handle symlinks properly
         - made dircopy recursivley create a multiple directory target dir if necessary

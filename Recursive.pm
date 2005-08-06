@@ -10,15 +10,25 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 sub VERSION { $VERSION; }
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
 our $CPRFComp = 0; 
 our $CopyLink = eval { symlink '',''; 1 } || 0;
+our $PFSCheck = 1;
+
+my $samecheck = sub {
+   if($PFSCheck) {
+      my $one = join '-', ( stat $_[0] )[0,1] || '';
+      my $two = join '-', ( stat $_[1] )[0,1] || '';
+      croak "$_[0] and $_[1] are identical" if $one eq $two && $one && $two;
+   }
+};
 
 sub fcopy { 
+   $samecheck->(@_);
    if(-l $_[0] && $CopyLink) {
       symlink readlink(shift()), shift() or return;
    } else {  
@@ -31,8 +41,8 @@ sub fcopy {
 sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
 
 sub dircopy {
-   croak "$_[0] and $_[1] are the same" if $_[0] eq $_[1]; # todo: check if absolutley the same and  not just different strings
-                                                           # absoulte and relative, /dir1/file /dir2/file where dir is a link to dir2, etc
+   croak "$_[0] and $_[1] are the same" if $_[0] eq $_[1]; 
+   $samecheck->(@_);
    croak "$_[0] is not a directory" if !-d $_[0];
    croak "$_[1] is not a directory" if -e $_[1] && !-d $_[1];
 
@@ -41,13 +51,13 @@ sub dircopy {
       my $pth = $parts[0];
       for(0..$#parts) {
          mkdir $pth or return if !-d $pth;
-         $pth = File::Spec->catfile($pth, $parts[$_ + 1]) unless ($_ + 1) == $#parts;
+         $pth = File::Spec->catdir($pth, $parts[$_ + 1]) unless $_ == $#parts;
       }
    } else {
       if($CPRFComp) {
          my @parts = File::Spec->splitdir($_[0]);
          while($parts[ $#parts ] eq '') { pop @parts; }
-         $_[1] = File::Spec->catfile($_[1], $parts[$#parts]);
+         $_[1] = File::Spec->catdir($_[1], $parts[$#parts]);
       }
    }
    my $baseend = $_[1];
@@ -96,6 +106,7 @@ sub dircopy {
    return ($filen,$dirn,$level) if wantarray;
    return $filen;
 }
+
 1;
 __END__
 
@@ -172,6 +183,11 @@ It is already set to true or false dending on your system's support of symlinks 
         print "Symlinks will not be preserved because your system does not support it\n";
     }
 
+=head2 Turning off stat() check
+
+By default the files or directories are checked to see if they are the same (IE linked, or two paths (absolute/relative or different relative paths) to the same file) by comparing the file's stat() info. 
+It's a very efficient check that croaks if they are and shouldn't be turned off but if you must for some weird reason just set $File::Copy::Recursive::PFSCheck to a false value. ("PFS" stands for "Physical File System")
+
 =head2 Emulating cp -rf dir1/ dir2/
 
 By default dircopy($dir1,$dir2) will put $dir1's contents right into $dir2 whether $dir2 exists or not.
@@ -179,7 +195,7 @@ By default dircopy($dir1,$dir2) will put $dir1's contents right into $dir2 wheth
 You can make dircopy() emulate cp -rf by setting $File::Copy::Recursive::CPRFComp to true.
 
 That means that if $dir2 exists it puts the contents into $dir2/$dir1 instead of $dir1 just like cp -rf.
-if $dir2 does not exist then the contents go into $dir2 like normal (also like cp -rf)
+If $dir2 does not exist then the contents go into $dir2 like normal (also like cp -rf)
 
 So assuming 'foo/file':
 
@@ -192,13 +208,9 @@ So assuming 'foo/file':
     # if bar does not exist the result is bar/file
     # if bar does exist the result is bar/foo/file
 
-=head2 TO DO
-
-Add to dircopy()'s check as mentioned in source.
-
 =head1 SEE ALSO
 
- L<File::Copy> L<File::Spec>
+L<File::Copy> L<File::Spec>
 
 =head1 AUTHOR
 
