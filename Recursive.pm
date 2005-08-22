@@ -9,33 +9,76 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(fcopy rcopy dircopy);
-our $VERSION = '0.10';
-sub VERSION { $VERSION; }
+our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove);
+our $VERSION = '0.11';
+sub VERSION { $VERSION }
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
 our $CPRFComp = 0; 
 our $CopyLink = eval { symlink '',''; 1 } || 0;
 our $PFSCheck = 1;
+our $RemvBase = 0;
+our $NoFtlPth = 0;
+our $ForcePth = 0;
+our $CopyLoop = 0;
 
 my $samecheck = sub {
+   my $one = '';
    if($PFSCheck) {
-      my $one = join '-', ( stat $_[0] )[0,1] || '';
-      my $two = join '-', ( stat $_[1] )[0,1] || '';
-      croak "$_[0] and $_[1] are identical" if $one eq $two && $one && $two;
+      $one = join '-', ( stat $_[0] )[0,1] || '';
+     my $two = join '-', ( stat $_[1] )[0,1] || '';
+      croak "$_[0] and $_[1] are identical" if $one eq $two && $one;
    }
+   if(-d $_[0] && !$CopyLoop) {
+      $one = join '-', ( stat $_[0] )[0,1] if !$one;
+      my $abs = File::Spec->rel2abs($_[1]);
+      my @pth = File::Spec->splitdir( $abs );
+      while(@pth) {
+         my $cur = File::Spec->catdir(@pth);
+         last if !$cur; # probably not necessary, but nice to have just in case :)
+         my $two = join '-', ( stat $cur )[0,1] || '';
+         croak "Caught Deep Recursion Condition: $_[0] contains $_[1]" if $one eq $two && $one;
+         pop @pth;
+      }
+   }
+};
+
+my $move = sub {
+   my $fl = shift;
+   my @x;
+   if($fl) {
+      @x = fcopy(@_) or return;
+   } else {
+      @x = dircopy(@_) or return;
+   }
+   if(@x) {
+      if($fl) {
+         unlink $_[0] or return;
+      } else {
+         pathrmdir($_[0]) or return;
+      }
+      if($RemvBase) {
+         my ($volm, $path) = File::Spec->splitpath($_[0]);
+         pathrm(File::Spec->catpath($volm,$path), $ForcePth, $NoFtlPth) or return;
+      }
+   }
+  return wantarray ? @x : $x[0];
 };
 
 sub fcopy { 
    $samecheck->(@_);
+   my ($volm, $path) = File::Spec->splitpath($_[1]);
+   if($path && !-d $path) {
+      pathmk(File::Spec->catpath($volm,$path), $NoFtlPth);
+   }
    if(-l $_[0] && $CopyLink) {
       symlink readlink(shift()), shift() or return;
    } else {  
       copy(@_) or return;
       chmod scalar((stat($_[0]))[2]), $_[1] if $KeepMode;
    }
-   return wantarray ? (1,0,0) : 1; # use 0's incase they do math on them and in case rcopy() is called in list context = no uninit val warnings 
+   return wantarray ? (1,0,0) : 1; # use 0's incase they do math on them and in case rcopy() is called in list context = no uninit val warnings
 }
 
 sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
@@ -47,12 +90,7 @@ sub dircopy {
    croak "$_[1] is not a directory" if -e $_[1] && !-d $_[1];
 
    if(!-d $_[1]) {
-      my @parts = File::Spec->splitdir($_[1]);
-      my $pth = $parts[0];
-      for(0..$#parts) {
-         mkdir $pth or return if !-d $pth;
-         $pth = File::Spec->catdir($pth, $parts[$_ + 1]) unless $_ == $#parts;
-      }
+      pathmk($_[1], $NoFtlPth) or return;
    } else {
       if($CPRFComp) {
          my @parts = File::Spec->splitdir($_[0]);
@@ -83,8 +121,8 @@ sub dircopy {
       closedir DIRH;
 
       for(@files) {
-         my $org = File::Spec->catfile($str,$_);
-         my $new = File::Spec->catfile($end,$_);
+         my $org = File::Spec->catfile($str, $_);
+         my $new = File::Spec->catfile($end, $_);
          if(-l $org && $CopyLink) {
             symlink readlink($org), $new or return;
          } elsif(-d $org) {
@@ -103,11 +141,73 @@ sub dircopy {
    };
 
    $recurs->(@_) or return;
-   return ($filen,$dirn,$level) if wantarray;
-   return $filen;
+   return wantarray ? ($filen,$dirn,$level) : $filen;
+}
+
+sub fmove { $move->(1, @_) } 
+
+sub rmove { -d $_[0] ? dirmove(@_) : fmove(@_) }
+
+sub dirmove { $move->(0, @_) }
+
+sub pathmk {
+   my @parts = File::Spec->splitdir( shift() );
+   my $nofatal = shift;
+   my $pth = $parts[0];
+   for(0..$#parts) {
+      mkdir $pth or return if !-d $pth && !$nofatal;
+      mkdir $pth if !-d $pth && $nofatal;
+      $pth = File::Spec->catdir($pth, $parts[$_ + 1]) unless $_ == $#parts;
+   }
+   1;
+}
+
+sub pathempty {
+   my $pth = shift; 
+   return 2 if !-d $pth;
+   opendir PTH, $pth or return;
+   for(grep !/^\.+$/, readdir PTH) {
+      my $flpth = File::Spec->catdir($pth, $_);
+      if(-d $flpth) {
+         pathrmdir($flpth) or return;
+      } else {
+         unlink $flpth or return;
+      }
+   }
+   close PTH;
+   1;
+}
+
+sub pathrm {
+   my $path = shift;
+   return 2 if !-d $path;
+   my @pth = File::Spec->splitdir( $path );
+   my $force = shift;
+
+   while(@pth) { 
+      my $cur = File::Spec->catdir(@pth);
+      last if !$cur; # necessary ??? 
+      if(!shift()) {
+         pathempty($cur) or return if $force;
+         rmdir $cur or return;
+      } else {
+         pathempty($cur) if $force;
+         rmdir $cur;
+      }
+      pop @pth;
+   }
+   1;
+}
+
+sub pathrmdir {
+   my $dir = shift;
+   return 2 if !-d $dir;
+   pathempty($dir) or return;
+   rmdir $dir or return;
 }
 
 1;
+
 __END__
 
 =head1 NAME
@@ -116,23 +216,27 @@ File::Copy::Recursive - Perl extension for recursively copying files and directo
 
 =head1 SYNOPSIS
 
-  use File::Copy::Recursive qw(fcopy rcopy dircopy);
+  use File::Copy::Recursive qw(fcopy rcopy dircopy fmove rmove dirmove);
 
   fcopy($orig,$new[,$buf]) or die $!;
   rcopy($orig,$new[,$buf]) or die $!;
   dircopy($orig,$new[,$buf]) or die $!;
 
+  fmove($orig,$new[,$buf]) or die $!;
+  rmove($orig,$new[,$buf]) or die $!;
+  dirmove($orig,$new[,$buf]) or die $!;
+
 =head1 DESCRIPTION
 
-This module copies directories recursively (or single files, well... singley) to an optional depth and attempts to preserve each file or directory's mode.
+This module copies and moves directories recursively (or single files, well... singley) to an optional depth and attempts to preserve each file or directory's mode.
 
-=head2 EXPORT
+=head1 EXPORT
 
 None by default. But you can export all the functions as in the example above.
 
 =head2 fcopy()
 
-This function uses File::Copy's copy() function to copy a file but not a directory.
+This function uses File::Copy's copy() function to copy a file but not a directory. Any directories are recursively created if need be.
 One difference to File::Copy::copy() is that fcopy attempts to preserve the mode (see Preserving Mode below)
 The optional $buf in the synopsis if the same as File::Copy::copy()'s 3rd argument
 returns the same as File::Copy::copy() in scalar context and 1,0,0 in list context to accomidate rcopy()'s list context on regular files. (See below for more info)
@@ -157,10 +261,102 @@ This function will allow you to specify a file *or* directory. It calls fcopy() 
 If you call rcopy() (or fcopy() for that matter) on a file in list context, the values will be 1,0,0 since no directories and no depth are used. 
 This is important becasue if its a directory in list context and there is only the initial directory the return value is 1,1,1.
 
+=head2 fmove()
+
+Copies the file then removes the original. You can manage the path the original file is in according to $RemvBase.
+
+=head2 dirmove()
+
+Copies the directory then removes the original. You can manage the path the original directory is in according to $RemvBase.
+
+=head2 rmove()
+
+Like rcopy() but calls fmove() or dirmove() instead.
+
+=head3 $RemvBase
+
+Default is false. When set to true the *move() functions will not only attempt to remove the original file or directory but will remove the given path it is in.
+
+So if you:
+
+   rmove('foo/bar/baz', '/etc/');
+   # "baz" is removed from foo/bar after it is successfully copied to /etc/
+   
+   $File::Copy::Recursive::Remvbase = 1;
+   rmove('foo/bar/baz','/etc/');
+   # if baz is successfully copied to /etc/ :
+   # first "baz" is removed from foo/bar
+   # then "foo/bar is removed via pathrm()
+
+=head4 $ForcePth
+
+Default is false. When set to true it calls pathempty() before any directories are removed to empty the directory so it can be rmdir()'ed when $RemvBase is in effect.
+
+=head2 Creating and Removing Paths
+
+=head3 $NoFtlPth
+
+Default is false. If set to true  rmdir(), mkdir(), and pathempty() calls in pathrm() and pathmk() do not return() on failure.
+
+If its set to true they just silently go about their business regardless. This isn't a good idea but its there if you want it.
+
+=head3 Path fuctions that you can use but that are not exportable
+
+=head4 pathrm()
+
+Removes a given path recursively. It removes the *entire* path so be carefull!!!
+
+Returns 2 if the given path is not a directory.
+
+  File::Copy::Recursive::pathrm('foo/bar/baz') or die $!;
+  # foo no longer exists
+
+Same as:
+
+  rmdir 'foo/bar/baz' or die $!;
+  rmdir 'foo/bar' or die $!;
+  rmdir 'foo' or die $!;
+
+An optional second argument makes it call pathempty() before any rmdir()'s when set to true.
+
+  File::Copy::Recursive::pathrm('foo/bar/baz', 1) or die $!;
+  # foo no longer exists
+
+Same as:
+
+  File::Copy::Recursive::pathempty('foo/bar/baz') or die $!;
+  rmdir 'foo/bar/baz' or die $!;
+  File::Copy::Recursive::pathempty('foo/bar/') or die $!;
+  rmdir 'foo/bar' or die $!;
+  File::Copy::Recursive::pathempty('foo/') or die $!;
+  rmdir 'foo' or die $!;
+
+An optional third argument acts like $File::Copy::Recursive::NoFtlPth, again probably not a good idea.
+
+=head4 pathempty()
+
+Recursively removes the given directory's contents so it is empty. returns 2 if argument is not a directory, 1 on successfully emptying the directory.
+
+   File::Copy::Recursive::pathempty($pth) or die $!;
+   # $pth is now an empty directory
+
+=head4 pathmk()
+
+Creates a given path recursively. Creates foo/bar/baz even if foo does not exist.
+
+   File::Copy::Recursive::pathmk('foo/bar/baz') or die $!;
+
+An optional second argument if true acts just like $File::Copy::Recursive::NoFtlPth, which means you'd never get your die() if something went wrong. Again, probably a *bad* idea.
+
+=head4 pathrmdir()
+
+Same as rmdir() but it calls pathempty() first to recursively empty it first since rmdir can not remove a directory with contents.
+Just removes the top directory the path given insetad of the entire path like pathrm(). Return 2 if the given argument is not a directory.
+
 =head2 Preserving Mode
 
 By default a quiet attempt is made to change the new file or directory to the mode of the old one.
-To turn this behavior off set 
+To turn this behavior off set
   $File::Copy::Recursive::KeepMode
 to false;
 
@@ -194,7 +390,7 @@ By default dircopy($dir1,$dir2) will put $dir1's contents right into $dir2 wheth
 
 You can make dircopy() emulate cp -rf by setting $File::Copy::Recursive::CPRFComp to true.
 
-That means that if $dir2 exists it puts the contents into $dir2/$dir1 instead of $dir1 just like cp -rf.
+That means that if $dir2 exists it puts the contents into $dir2/$dir1 instead of $dir2 just like cp -rf.
 If $dir2 does not exist then the contents go into $dir2 like normal (also like cp -rf)
 
 So assuming 'foo/file':
@@ -207,6 +403,18 @@ So assuming 'foo/file':
     dircopy('foo', 'bar') or die $!;
     # if bar does not exist the result is bar/file
     # if bar does exist the result is bar/foo/file
+
+=head2 Allowing Copy Loops
+
+If you want to allow:
+
+  cp -rf . foo/
+
+type behavior set $File::Copy::Recursive::CopyLoop to true.
+
+This is false by default so that a check is done to see if the source directory will contain the target directory and croaks to avoid this problem.
+
+If you ever find a situation where $CopyLoop = 1 is desirable let me know (IE its a bad bad idea but is there if you want it)
 
 =head1 SEE ALSO
 

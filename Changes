@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.11  
+	- Added the *move and path* funtions
+	- Added $CopyLoop
+	- Made fcopy() recursively create its base directories if necessary like dircopy() did in 0.09 on
+
 0.10  Sat Aug  6 17:01:12 2005
 	- fixed indent in "SEE ALSO" POD that made it render badly	
 	- Added $PFSCheck
