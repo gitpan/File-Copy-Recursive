@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove);
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 sub VERSION { $VERSION }
 
 our $MaxDepth = 0;
@@ -154,13 +154,18 @@ sub pathmk {
    my @parts = File::Spec->splitdir( shift() );
    my $nofatal = shift;
    my $pth = $parts[0];
-   for(0..$#parts) {
+   my $zer = 0;
+   if(!$pth) {
+      $pth = File::Spec->catdir($parts[0],$parts[1]);
+      $zer = 1;
+   }
+   for($zer..$#parts) {
       mkdir $pth or return if !-d $pth && !$nofatal;
       mkdir $pth if !-d $pth && $nofatal;
       $pth = File::Spec->catdir($pth, $parts[$_ + 1]) unless $_ == $#parts;
    }
    1;
-}
+} 
 
 sub pathempty {
    my $pth = shift; 
