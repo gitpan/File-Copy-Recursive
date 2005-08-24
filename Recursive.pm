@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove);
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 sub VERSION { $VERSION }
 
 our $MaxDepth = 0;
@@ -84,21 +84,28 @@ sub fcopy {
 sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
 
 sub dircopy {
-   croak "$_[0] and $_[1] are the same" if $_[0] eq $_[1]; 
+   my $globstar = 0;
+   my $_zero = $_[0];
+   my $_one = $_[1];
+   if ( substr( $_zero, ( 1 * -1 ), 1 ) eq '*') {
+       $globstar = 1;
+       $_zero = substr( $_zero, 0, ( length( $_zero ) - 1 ) );
+   }
+   croak "$_zero and $_[1] are the same" if $_zero eq $_[1]; 
    $samecheck->(@_);
-   croak "$_[0] is not a directory" if !-d $_[0];
+   croak "$_zero is not a directory" if !-d $_zero;
    croak "$_[1] is not a directory" if -e $_[1] && !-d $_[1];
 
    if(!-d $_[1]) {
       pathmk($_[1], $NoFtlPth) or return;
    } else {
-      if($CPRFComp) {
-         my @parts = File::Spec->splitdir($_[0]);
+      if($CPRFComp && !$globstar) {
+         my @parts = File::Spec->splitdir($_zero);
          while($parts[ $#parts ] eq '') { pop @parts; }
-         $_[1] = File::Spec->catdir($_[1], $parts[$#parts]);
+         $_one = File::Spec->catdir($_[1], $parts[$#parts]);
       }
    }
-   my $baseend = $_[1];
+   my $baseend = $_one;
    my $level = 0;
    my $filen = 0;
    my $dirn = 0;
@@ -140,7 +147,7 @@ sub dircopy {
       1;
    };
 
-   $recurs->(@_) or return;
+   $recurs->($_zero, $_one, $_[2]) or return;
    return wantarray ? ($filen,$dirn,$level) : $filen;
 }
 
@@ -408,6 +415,19 @@ So assuming 'foo/file':
     dircopy('foo', 'bar') or die $!;
     # if bar does not exist the result is bar/file
     # if bar does exist the result is bar/foo/file
+
+You can also specify a star for cp -rf glob type behavior:
+
+    dircopy('foo/*', 'bar') or die $!;
+    # if bar does not exist the result is bar/file
+    # if bar does exist the result is bar/file
+
+    $File::Copy::Recursive::CPRFComp = 1;
+    dircopy('foo/*', 'bar') or die $!;
+    # if bar does not exist the result is bar/file
+    # if bar does exist the result is bar/file
+
+NOTE: This is only like cp -rf foo/* and *DOES NOT EXPAND PARIAL DIRECTORY NAMES LIEK YOUR SHELL DOES* (IE not like rp -rf fo* to copy foo/*)
 
 =head2 Allowing Copy Loops
 
