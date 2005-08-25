@@ -1,5 +1,8 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.14  Thu Aug 25 14:19:58 2005
+	- added $RMTrgDir and $RMTrgFil functionality
+
 0.13  Wed Aug 24 14:41:14 2005
 	- added cp -rf star glob funtionality to better emulate cp -rf when using $CPRFComp
 	- fixed possible "read-only" value error/warning when $CPRFComp is in effect

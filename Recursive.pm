@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove);
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 sub VERSION { $VERSION }
 
 our $MaxDepth = 0;
@@ -22,6 +22,8 @@ our $RemvBase = 0;
 our $NoFtlPth = 0;
 our $ForcePth = 0;
 our $CopyLoop = 0;
+our $RMTrgFil = 0;
+our $RMTrgDir = 0;
 
 my $samecheck = sub {
    my $one = '';
@@ -68,6 +70,13 @@ my $move = sub {
 
 sub fcopy { 
    $samecheck->(@_);
+   if($RMTrgFil && -e $_[1]) {
+      if($RMTrgFil == 1) {
+         unlink $_[1] or warn $!;
+      } else {
+         unlink $_[1] or return;
+      }
+   }
    my ($volm, $path) = File::Spec->splitpath($_[1]);
    if($path && !-d $path) {
       pathmk(File::Spec->catpath($volm,$path), $NoFtlPth);
@@ -84,6 +93,13 @@ sub fcopy {
 sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
 
 sub dircopy {
+   if($RMTrgDir && -d $_[1]) {
+      if($RMTrgDir == 1) {
+         pathrmdir $_[1] or warn $!;
+      } else {
+         pathrmdir $_[1] or return;
+      }
+   }
    my $globstar = 0;
    my $_zero = $_[0];
    my $_one = $_[1];
@@ -391,6 +407,26 @@ It is already set to true or false dending on your system's support of symlinks 
         print "Symlinks will not be preserved because your system does not support it\n";
     }
 
+=head2 Removing existing target file or directory before copying.
+
+This can be done by setting $File::Copy::Recursive::RMTrgFil or $File::Copy::Recursive::RMTrgDir for file or directory behavior respectively.
+
+0 = off (This is the default)
+
+1 = warn $! if removal fails
+
+2 = return if removal fails
+
+    $File::Copy::Recursive::RMTrgFil = 1;
+    fcopy($orig, $target) or die $!;
+    # if it fails it does warn() and keeps going
+
+    $File::Copy::Recursive::RMTrgDir = 2;
+    dircopy($orig, $target) or die $!;
+    # if it fails it does your "or die"
+
+This should be unnecessary most of the time but its there if you need it :)
+
 =head2 Turning off stat() check
 
 By default the files or directories are checked to see if they are the same (IE linked, or two paths (absolute/relative or different relative paths) to the same file) by comparing the file's stat() info. 
@@ -427,7 +463,7 @@ You can also specify a star for cp -rf glob type behavior:
     # if bar does not exist the result is bar/file
     # if bar does exist the result is bar/file
 
-NOTE: This is only like cp -rf foo/* and *DOES NOT EXPAND PARIAL DIRECTORY NAMES LIEK YOUR SHELL DOES* (IE not like rp -rf fo* to copy foo/*)
+NOTE: The '*' is only like cp -rf foo/* and *DOES NOT EXPAND PARTIAL DIRECTORY NAMES LIKE YOUR SHELL DOES* (IE not like rp -rf fo* to copy foo/*)
 
 =head2 Allowing Copy Loops
 
