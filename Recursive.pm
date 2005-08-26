@@ -9,9 +9,8 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 
 require Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove);
-our $VERSION = '0.14';
-sub VERSION { $VERSION }
+our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
+our $VERSION = '0.15';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -72,7 +71,7 @@ sub fcopy {
    $samecheck->(@_);
    if($RMTrgFil && -e $_[1]) {
       if($RMTrgFil == 1) {
-         unlink $_[1] or warn $!;
+         unlink $_[1] or carp "\$RMTrgFil failed: $!";
       } else {
          unlink $_[1] or return;
       }
@@ -95,7 +94,7 @@ sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
 sub dircopy {
    if($RMTrgDir && -d $_[1]) {
       if($RMTrgDir == 1) {
-         pathrmdir $_[1] or warn $!;
+         pathrmdir $_[1] or carp "\$RMTrgDir failed: $!";
       } else {
          pathrmdir $_[1] or return;
       }
@@ -260,7 +259,7 @@ This module copies and moves directories recursively (or single files, well... s
 
 =head1 EXPORT
 
-None by default. But you can export all the functions as in the example above.
+None by default. But you can export all the functions as in the example above and the path* functions if you wish.
 
 =head2 fcopy()
 
@@ -328,7 +327,9 @@ Default is false. If set to true  rmdir(), mkdir(), and pathempty() calls in pat
 
 If its set to true they just silently go about their business regardless. This isn't a good idea but its there if you want it.
 
-=head3 Path fuctions that you can use but that are not exportable
+=head3 Path functions
+
+These functions exist soley because they were necessary for the move and copy functions to have the features they do and not because they are of themselves the purpose of this module. That being said, here is how they work so you can understand how the copy and move funtions work and use them by themselves if you wish.
 
 =head4 pathrm()
 
@@ -413,7 +414,7 @@ This can be done by setting $File::Copy::Recursive::RMTrgFil or $File::Copy::Rec
 
 0 = off (This is the default)
 
-1 = warn $! if removal fails
+1 = carp() $! if removal fails
 
 2 = return if removal fails
 
@@ -480,6 +481,13 @@ If you ever find a situation where $CopyLoop = 1 is desirable let me know (IE it
 =head1 SEE ALSO
 
 L<File::Copy> L<File::Spec>
+
+=head1 TO DO
+
+Add OO interface so you can have different behavior with different objects instead of relying on global variables.
+This will give better control in environments where behavior based on global variables is not very desireable.
+
+I'll add this after the latest verision has been out for a while with no new features or issues found :)
 
 =head1 AUTHOR
 

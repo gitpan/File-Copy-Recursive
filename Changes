@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.15  Fri Aug 26 08:40:26 2005
+	- changed $RMTrgDir and $RMTrgFil to carp() instead of warn() and with slightly more useful message
+	- fixed issue with VERSION() that conflicted with UNIVERSAL's VERSION functionality
+	- added "TO DO" regarding an OO interface
+	
 0.14  Thu Aug 25 14:19:58 2005
 	- added $RMTrgDir and $RMTrgFil functionality
 
