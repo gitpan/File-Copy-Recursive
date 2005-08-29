@@ -1,6 +1,6 @@
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         File-Copy-Recursive
-version:      0.15
+version:      0.16
 version_from: Recursive.pm
 installdirs:  site
 requires:
