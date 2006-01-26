@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -145,9 +145,9 @@ sub dircopy {
       }
       $level++;
 
-      opendir DIRH, $str or return;
-      my @files = grep( $_ ne "." && $_ ne "..", readdir(DIRH));
-      closedir DIRH;
+      opendir my $pth_dh, $str or return;
+      my @files = grep( $_ ne '.' && $_ ne '..', readdir($pth_dh));
+      closedir $pth_dh;
 
       for(@files) {
          my $org = File::Spec->catfile($str, $_);
@@ -199,8 +199,8 @@ sub pathmk {
 sub pathempty {
    my $pth = shift; 
    return 2 if !-d $pth;
-   opendir PTH, $pth or return;
-   for(grep !/^\.+$/, readdir PTH) {
+   opendir my $pth_dh, $pth or return;
+   for(grep !/^\.+$/, readdir $pth_dh) {
       my $flpth = File::Spec->catdir($pth, $_);
       if(-d $flpth) {
          pathrmdir($flpth) or return;
@@ -208,7 +208,7 @@ sub pathempty {
          unlink $flpth or return;
       }
    }
-   close PTH;
+   closedir $pth_dh;
    1;
 }
 
