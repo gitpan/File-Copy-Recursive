@@ -1,7 +1,11 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.18  Sun Jan 29 13:34:37 2006
+	- added parens to the opendir() calls to avoid spurious 5.8.1 and < warnings, thanks Chris Scott for letting me know about it
+	- fixed change log 0.17 mistype {(0 to ()} :)
+
 0.17  Thu Jan 26 11:51:01 2006
-	- fixed pathempty(0 calling close() instead of closedir() (17295, thanks Stoian for bringing that out)
+	- fixed pathempty() calling close() instead of closedir() (17295, thanks Stoian for bringing that out)
         - changed handles to variables as per "Perl Best Pratices"
         - change a readir to us single quote sinstead o double since no interpolation is being done
 
