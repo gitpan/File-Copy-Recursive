@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.19  Mon Feb 27 07:37:01 2006
+	- added missing "star check" to rcopy() (thanks Ben Thomas)
+	- added "star check" to rmove() and had it removed if necessary, to make passing the same variables to rcopy and rmove will work ok
+	- added untainting and slight "best practive" cleanup to a for loop
+
 0.18  Sun Jan 29 13:34:37 2006
 	- added parens to the opendir() calls to avoid spurious 5.8.1 and < warnings, thanks Chris Scott for letting me know about it
 	- fixed change log 0.17 mistype {(0 to ()} :)

@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -96,7 +96,10 @@ sub fcopy {
    return wantarray ? (1,0,0) : 1; # use 0's incase they do math on them and in case rcopy() is called in list context = no uninit val warnings
 }
 
-sub rcopy { -d $_[0] ? dircopy(@_) : fcopy(@_) }
+sub rcopy { 
+    -d $_[0] || substr( $_[0], ( 1 * -1), 1) eq '*' ? dircopy(@_) 
+                                                    : fcopy(@_); 
+}
 
 sub dircopy {
    if($RMTrgDir && -d $_[1]) {
@@ -149,22 +152,25 @@ sub dircopy {
       my @files = grep( $_ ne '.' && $_ ne '..', readdir($pth_dh));
       closedir $pth_dh;
 
-      for(@files) {
-         my $org = File::Spec->catfile($str, $_);
-         my $new = File::Spec->catfile($end, $_);
-         if(-l $org && $CopyLink) {
-            symlink readlink($org), $new or return;
-         } elsif(-d $org) {
-            $recurs->($org,$new,$buf) if defined $buf;
-            $recurs->($org,$new) if !defined $buf;
-            $filen++;
-            $dirn++;
-         } else {
-            copy($org,$new,$buf) or return if defined $buf;
-            copy($org,$new) or return if !defined $buf;
-            chmod scalar((stat($org))[2]), $new if $KeepMode;
-            $filen++;
-         }
+      for my $file (@files) {
+          my ($file_ut) = $file =~ m{ (.*) }xms;
+          my $org = File::Spec->catfile($str, $file_ut);
+          my $new = File::Spec->catfile($end, $file_ut);
+          if(-l $org && $CopyLink) {
+              symlink readlink($org), $new or return;
+          } 
+          elsif(-d $org) {
+              $recurs->($org,$new,$buf) if defined $buf;
+              $recurs->($org,$new) if !defined $buf;
+              $filen++;
+              $dirn++;
+          } 
+          else {
+              copy($org,$new,$buf) or return if defined $buf;
+              copy($org,$new) or return if !defined $buf;
+              chmod scalar((stat($org))[2]), $new if $KeepMode;
+              $filen++;
+          }
       }
       1;
    };
@@ -175,7 +181,13 @@ sub dircopy {
 
 sub fmove { $move->(1, @_) } 
 
-sub rmove { -d $_[0] ? dirmove(@_) : fmove(@_) }
+sub rmove { 
+    my $_zero = shift;
+    $_zero = substr( $_zero, 0, ( length( $_zero ) - 1 ) )
+        if substr( $_[0], ( 1 * -1), 1) eq '*';
+
+    -d $_zero ? dirmove($_zero, @_) : fmove($_zero, @_);
+}
 
 sub dirmove { $move->(0, @_) }
 
