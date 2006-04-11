@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.20  Tue Apr 11 15:29:37 2006
+        - fixed bug 18667
+	- added $CondCopy functionality to dircopy() (and subsequently dirmove() and rcopy() and rmove() when handling directpries)
+
 0.19  Mon Feb 27 07:37:01 2006
 	- added missing "star check" to rcopy() (thanks Ben Thomas)
 	- added "star check" to rmove() and had it removed if necessary, to make passing the same variables to rcopy and rmove will work ok

@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -23,6 +23,7 @@ our $ForcePth = 0;
 our $CopyLoop = 0;
 our $RMTrgFil = 0;
 our $RMTrgDir = 0;
+our $CondCopy = {};
 
 my $samecheck = sub {
    my $one = '';
@@ -67,6 +68,20 @@ my $move = sub {
   return wantarray ? @x : $x[0];
 };
 
+my $ok_todo_asper_condcopy = sub {
+    my $org = shift;
+    my $copy = 1;
+    if(exists $CondCopy->{$org}) {
+        if($CondCopy->{$org}{'md5'}) {
+
+        }
+        if($copy) {
+
+        }
+    }
+    return $copy;
+};
+
 sub fcopy { 
    $samecheck->(@_);
    if($RMTrgFil && (-d $_[1] || -e $_[1]) ) {
@@ -91,7 +106,11 @@ sub fcopy {
       symlink readlink(shift()), shift() or return;
    } else {  
       copy(@_) or return;
-      chmod scalar((stat($_[0]))[2]), $_[1] if $KeepMode;
+
+      my @base_file = File::Spec->splitpath($_[0]);
+      my $mode_trg = -d $_[1] ? File::Spec->catfile($_[1], $base_file[ $#base_file ]) : $_[1];
+
+      chmod scalar((stat($_[0]))[2]), $mode_trg if $KeepMode;
    }
    return wantarray ? (1,0,0) : 1; # use 0's incase they do math on them and in case rcopy() is called in list context = no uninit val warnings
 }
@@ -166,10 +185,12 @@ sub dircopy {
               $dirn++;
           } 
           else {
-              copy($org,$new,$buf) or return if defined $buf;
-              copy($org,$new) or return if !defined $buf;
-              chmod scalar((stat($org))[2]), $new if $KeepMode;
-              $filen++;
+              if($ok_todo_asper_condcopy->($org)) {
+                  copy($org,$new,$buf) or return if defined $buf;
+                  copy($org,$new) or return if !defined $buf;
+                  chmod scalar((stat($org))[2]), $new if $KeepMode;
+                  $filen++;
+              }
           }
       }
       1;
