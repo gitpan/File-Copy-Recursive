@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -186,8 +186,8 @@ sub dircopy {
           } 
           else {
               if($ok_todo_asper_condcopy->($org)) {
-                  copy($org,$new,$buf) or return if defined $buf;
-                  copy($org,$new) or return if !defined $buf;
+                  fcopy($org,$new,$buf) or return if defined $buf;
+                  fcopy($org,$new) or return if !defined $buf;
                   chmod scalar((stat($org))[2]), $new if $KeepMode;
                   $filen++;
               }
@@ -458,11 +458,11 @@ This can be done by setting $File::Copy::Recursive::RMTrgFil or $File::Copy::Rec
 
 2 = return if removal fails
 
-    $File::Copy::Recursive::RMTrgFil = 1;
+    local $File::Copy::Recursive::RMTrgFil = 1;
     fcopy($orig, $target) or die $!;
     # if it fails it does warn() and keeps going
 
-    $File::Copy::Recursive::RMTrgDir = 2;
+    local $File::Copy::Recursive::RMTrgDir = 2;
     dircopy($orig, $target) or die $!;
     # if it fails it does your "or die"
 
@@ -478,6 +478,9 @@ It's a very efficient check that croaks if they are and shouldn't be turned off 
 By default dircopy($dir1,$dir2) will put $dir1's contents right into $dir2 whether $dir2 exists or not.
 
 You can make dircopy() emulate cp -rf by setting $File::Copy::Recursive::CPRFComp to true.
+
+NOTE: This only emulates -f in the sense that it does not prompt. It does not remove the target file or directory if it exists.
+If you need to do that then use the variables $RMTrgFil and $RMTrgDir described in "Removing existing target file or directory before copying" above.
 
 That means that if $dir2 exists it puts the contents into $dir2/$dir1 instead of $dir2 just like cp -rf.
 If $dir2 does not exist then the contents go into $dir2 like normal (also like cp -rf)
@@ -504,7 +507,7 @@ You can also specify a star for cp -rf glob type behavior:
     # if bar does not exist the result is bar/file
     # if bar does exist the result is bar/file
 
-NOTE: The '*' is only like cp -rf foo/* and *DOES NOT EXPAND PARTIAL DIRECTORY NAMES LIKE YOUR SHELL DOES* (IE not like rp -rf fo* to copy foo/*)
+NOTE: The '*' is only like cp -rf foo/* and *DOES NOT EXPAND PARTIAL DIRECTORY NAMES LIKE YOUR SHELL DOES* (IE not like cp -rf fo* to copy foo/*)
 
 =head2 Allowing Copy Loops
 

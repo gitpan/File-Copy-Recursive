@@ -1,5 +1,9 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.21  Mon Apr 24 12:28:11 2006  
+        - made dircopy() use fcopy() instead of copy() for files so that it'd behave consistently and correctly
+	- updated some POD
+
 0.20  Tue Apr 11 15:29:37 2006
         - fixed bug 18667
 	- added $CondCopy functionality to dircopy() (and subsequently dirmove() and rcopy() and rmove() when handling directpries)
