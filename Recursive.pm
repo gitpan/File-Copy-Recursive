@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -28,18 +28,18 @@ our $CondCopy = {};
 my $samecheck = sub {
    my $one = '';
    if($PFSCheck) {
-      $one = join '-', ( stat $_[0] )[0,1] || '';
-     my $two = join '-', ( stat $_[1] )[0,1] || '';
+      $one    = join( '-', ( stat $_[0] )[0,1] ) || '';
+      my $two = join( '-', ( stat $_[1] )[0,1] ) || '';
       croak "$_[0] and $_[1] are identical" if $one eq $two && $one;
    }
    if(-d $_[0] && !$CopyLoop) {
-      $one = join '-', ( stat $_[0] )[0,1] if !$one;
+      $one    = join( '-', ( stat $_[0] )[0,1] ) if !$one;
       my $abs = File::Spec->rel2abs($_[1]);
       my @pth = File::Spec->splitdir( $abs );
       while(@pth) {
          my $cur = File::Spec->catdir(@pth);
          last if !$cur; # probably not necessary, but nice to have just in case :)
-         my $two = join '-', ( stat $cur )[0,1] || '';
+         my $two = join( '-', ( stat $cur )[0,1] ) || '';
          croak "Caught Deep Recursion Condition: $_[0] contains $_[1]" if $one eq $two && $one;
          pop @pth;
       }
