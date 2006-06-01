@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -123,9 +123,9 @@ sub rcopy {
 sub dircopy {
    if($RMTrgDir && -d $_[1]) {
       if($RMTrgDir == 1) {
-         pathrmdir $_[1] or carp "\$RMTrgDir failed: $!";
+         pathrmdir($_[1]) or carp "\$RMTrgDir failed: $!";
       } else {
-         pathrmdir $_[1] or return;
+         pathrmdir($_[1]) or return;
       }
    }
    my $globstar = 0;
@@ -150,9 +150,9 @@ sub dircopy {
       }
    }
    my $baseend = $_one;
-   my $level = 0;
-   my $filen = 0;
-   my $dirn = 0;
+   my $level   = 0;
+   my $filen   = 0;
+   my $dirn    = 0;
 
    my $recurs; #must be my()ed before sub {} since it calls itself
    $recurs =  sub {
