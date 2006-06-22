@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -233,8 +233,9 @@ sub pathempty {
    my $pth = shift; 
    return 2 if !-d $pth;
    opendir(my $pth_dh, $pth) or return;
-   for(grep !/^\.+$/, readdir($pth_dh)) {
-      my $flpth = File::Spec->catdir($pth, $_);
+   for my $name (grep !/^\.+$/, readdir($pth_dh)) {
+      my ($name_ut) = $name =~ m{ (.*) }xms;
+      my $flpth = File::Spec->catdir($pth, $name_ut);
       if(-d $flpth) {
          pathrmdir($flpth) or return;
       } else {
