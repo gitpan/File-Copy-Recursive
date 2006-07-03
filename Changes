@@ -1,5 +1,8 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.25  Mon Jul  3 10:20:50 2006
+	- 
+
 0.24  Thu Jun 22 13:32:55 2006
 	- fixed bug 20045
 

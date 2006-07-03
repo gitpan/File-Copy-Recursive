@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.24';
+our $VERSION = '0.25';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -26,6 +26,8 @@ our $RMTrgDir = 0;
 our $CondCopy = {};
 
 my $samecheck = sub {
+   return if $^O eq 'MSWin32'; # need better way to check for this on winders...
+
    my $one = '';
    if($PFSCheck) {
       $one    = join( '-', ( stat $_[0] )[0,1] ) || '';
@@ -521,6 +523,9 @@ type behavior set $File::Copy::Recursive::CopyLoop to true.
 This is false by default so that a check is done to see if the source directory will contain the target directory and croaks to avoid this problem.
 
 If you ever find a situation where $CopyLoop = 1 is desirable let me know (IE its a bad bad idea but is there if you want it)
+
+(Note: On Windows this was necessary since it uses stat() to detemine samedness and stat() is essencially useless for this on Windows. 
+The test is now simply skipped on Windows but I'd rather have an actual reliable check if anyone in Microsoft land would care to share)
 
 =head1 SEE ALSO
 
