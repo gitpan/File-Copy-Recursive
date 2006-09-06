@@ -1,7 +1,11 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.26  Wed Sep  6 23:45:16 2006
+    - added local DIE SIG as per 21351
+    - handle symlinks whose target's are missing more gracefully - 21267
+
 0.25  Mon Jul  3 10:20:50 2006
-	- 
+	- [forgot to add this one... ??]
 
 0.24  Thu Jun 22 13:32:55 2006
 	- fixed bug 20045

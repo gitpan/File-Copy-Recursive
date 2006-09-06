@@ -10,12 +10,12 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
 our $CPRFComp = 0; 
-our $CopyLink = eval { symlink '',''; 1 } || 0;
+our $CopyLink = eval { local $SIG{'__DIE__'};symlink '',''; 1 } || 0;
 our $PFSCheck = 1;
 our $RemvBase = 0;
 our $NoFtlPth = 0;
@@ -104,7 +104,9 @@ sub fcopy {
    if($path && !-d $path) {
       pathmk(File::Spec->catpath($volm,$path), $NoFtlPth);
    }
-   if(-l $_[0] && $CopyLink) {
+   if(-l $_[0] && ($CopyLink || !-e readlink($_[0])) ) {
+      carp "Copying a symlink ($_[0]) whose target does not exist" 
+          if !-e readlink($_[0]);
       symlink readlink(shift()), shift() or return;
    } else {  
       copy(@_) or return;
@@ -177,7 +179,9 @@ sub dircopy {
           my ($file_ut) = $file =~ m{ (.*) }xms;
           my $org = File::Spec->catfile($str, $file_ut);
           my $new = File::Spec->catfile($end, $file_ut);
-          if(-l $org && $CopyLink) {
+          if(-l $org && ($CopyLink || !-e readlink($_[0])) ) {
+              carp "Copying a symlink ($_[0]) whose target does not exist" 
+                  if !-e readlink($_[0]);
               symlink readlink($org), $new or return;
           } 
           elsif(-d $org) {
