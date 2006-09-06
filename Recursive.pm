@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
