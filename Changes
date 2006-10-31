@@ -1,7 +1,11 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.29  Tue Oct 31 12:21:20 2006
+    - Made fcopy() do samecheck if $RMTrgFil is used and is triggered to avoid it removing the file before it can be copied to itself.
+
 0.28  Thu Sep  7 15:27:06 2006
-	- rebundled with make dist under COPY_EXTENDED_ATTRIBUTES_DISABLE=true for 21378
+	- rebundled with make dist under COPY_EXTENDED_ATTRIBUTES_DISABLE=true for
+	 21378, thnaks Robert Boone for that excellent solution!
 	
 0.27  Wed Sep  6 23:46:16 2006
 	- quick rename so it can be uploaded fresh due to pause upload mishap

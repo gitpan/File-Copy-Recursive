@@ -10,7 +10,7 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 our $MaxDepth = 0;
 our $KeepMode = 1;
@@ -92,6 +92,7 @@ sub fcopy {
         my @trgx = File::Spec->splitpath( $_[0] );
         $trg = File::Spec->catfile( $_[1], $trgx[ $#trgx ] );
       }
+      $samecheck->($_[0], $trg);
       if(-e $trg) {
          if($RMTrgFil == 1) {
             unlink $trg or carp "\$RMTrgFil failed: $!";
