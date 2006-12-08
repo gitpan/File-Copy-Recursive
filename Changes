@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.30  Fri Dec  8 14:26:49 2006
+    - Added $BdTrgWrn to quiet warnings by default (rt 23861)
+    - added backwards compat for pre 5.6 perls (rt 21800)
+    - Added $SkipFlop (rt request 21503)
+
 0.29  Tue Oct 31 12:21:20 2006
     - Made fcopy() do samecheck if $RMTrgFil is used and is triggered to avoid it removing the file before it can be copied to itself.
 

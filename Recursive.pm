@@ -1,29 +1,41 @@
 package File::Copy::Recursive;
 
 use strict;
+BEGIN {
+    # Keep older versions of Perl from trying to use lexical warnings
+    $INC{'warnings.pm'} = "fake warnings entry for < 5.6 perl ($])" if $] < 5.006;
+}
 use warnings;
 
 use Carp;
 use File::Copy; 
 use File::Spec; #not really needed because File::Copy already gets it, but for good measure :)
 
-require Exporter;
-our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-our $VERSION = '0.29';
+use vars qw( 
+    @ISA      @EXPORT_OK $VERSION  $MaxDepth $KeepMode $CPRFComp $CopyLink 
+    $PFSCheck $RemvBase $NoFtlPth  $ForcePth $CopyLoop $RMTrgFil $RMTrgDir 
+    $CondCopy $BdTrgWrn $SkipFlop
+);
 
-our $MaxDepth = 0;
-our $KeepMode = 1;
-our $CPRFComp = 0; 
-our $CopyLink = eval { local $SIG{'__DIE__'};symlink '',''; 1 } || 0;
-our $PFSCheck = 1;
-our $RemvBase = 0;
-our $NoFtlPth = 0;
-our $ForcePth = 0;
-our $CopyLoop = 0;
-our $RMTrgFil = 0;
-our $RMTrgDir = 0;
-our $CondCopy = {};
+require Exporter;
+@ISA = qw(Exporter);
+@EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
+$VERSION = '0.30';
+
+$MaxDepth = 0;
+$KeepMode = 1;
+$CPRFComp = 0; 
+$CopyLink = eval { local $SIG{'__DIE__'};symlink '',''; 1 } || 0;
+$PFSCheck = 1;
+$RemvBase = 0;
+$NoFtlPth = 0;
+$ForcePth = 0;
+$CopyLoop = 0;
+$RMTrgFil = 0;
+$RMTrgDir = 0;
+$CondCopy = {};
+$BdTrgWrn = 0;
+$SkipFlop = 0;
 
 my $samecheck = sub {
    return if $^O eq 'MSWin32'; # need better way to check for this on winders...
@@ -107,7 +119,7 @@ sub fcopy {
    }
    if(-l $_[0] && ($CopyLink || !-e readlink($_[0])) ) {
       carp "Copying a symlink ($_[0]) whose target does not exist" 
-          if !-e readlink($_[0]);
+          if !-e readlink($_[0]) && $BdTrgWrn;
       symlink readlink(shift()), shift() or return;
    } else {  
       copy(@_) or return;
@@ -172,9 +184,9 @@ sub dircopy {
       }
       $level++;
 
-      opendir(my $pth_dh, $str) or return;
-      my @files = grep( $_ ne '.' && $_ ne '..', readdir($pth_dh));
-      closedir $pth_dh;
+      opendir(STR_DH, $str) or return;
+      my @files = grep( $_ ne '.' && $_ ne '..', readdir(STR_DH));
+      closedir STR_DH;
 
       for my $file (@files) {
           my ($file_ut) = $file =~ m{ (.*) }xms;
@@ -182,7 +194,7 @@ sub dircopy {
           my $new = File::Spec->catfile($end, $file_ut);
           if(-l $org && ($CopyLink || !-e readlink($_[0])) ) {
               carp "Copying a symlink ($_[0]) whose target does not exist" 
-                  if !-e readlink($_[0]);
+                  if !-e readlink($_[0]) && $BdTrgWrn;
               symlink readlink($org), $new or return;
           } 
           elsif(-d $org) {
@@ -193,8 +205,14 @@ sub dircopy {
           } 
           else {
               if($ok_todo_asper_condcopy->($org)) {
-                  fcopy($org,$new,$buf) or return if defined $buf;
-                  fcopy($org,$new) or return if !defined $buf;
+                  if($SkipFlop) {
+                      fcopy($org,$new,$buf) or next if defined $buf;
+                      fcopy($org,$new) or next if !defined $buf;                      
+                  }
+                  else {
+                      fcopy($org,$new,$buf) or return if defined $buf;
+                      fcopy($org,$new) or return if !defined $buf;
+                  }
                   chmod scalar((stat($org))[2]), $new if $KeepMode;
                   $filen++;
               }
@@ -239,8 +257,8 @@ sub pathmk {
 sub pathempty {
    my $pth = shift; 
    return 2 if !-d $pth;
-   opendir(my $pth_dh, $pth) or return;
-   for my $name (grep !/^\.+$/, readdir($pth_dh)) {
+   opendir(PTH_DH, $pth) or return;
+   for my $name (grep !/^\.+$/, readdir(PTH_DH)) {
       my ($name_ut) = $name =~ m{ (.*) }xms;
       my $flpth = File::Spec->catdir($pth, $name_ut);
       if(-d $flpth) {
@@ -249,7 +267,7 @@ sub pathempty {
          unlink $flpth or return;
       }
    }
-   closedir $pth_dh;
+   closedir PTH_DH;
    1;
 }
 
@@ -329,6 +347,12 @@ In list context it returns the number of files and directories, number of direct
 
   my $num_of_files_and_dirs = dircopy($orig,$new);
   my($num_of_files_and_dirs,$num_of_dirs,$depth_traversed) = dircopy($orig,$new);
+  
+Normally it stops and return's if a copy fails, to continue on regardless set $File::Copy::Recursive::SkipFlop to true.
+
+    local $File::Copy::Recursive::SkipFlop = 1;
+
+That way it will copy everythgingit can ina directory and won't stop because of permissions, etc...
 
 =head2 rcopy()
 
@@ -342,7 +366,7 @@ Copies the file then removes the original. You can manage the path the original 
 
 =head2 dirmove()
 
-Copies the directory then removes the original. You can manage the path the original directory is in according to $RemvBase.
+Uses dircopy() to copy the directory then removes the original. You can manage the path the original directory is in according to $RemvBase.
 
 =head2 rmove()
 
@@ -357,7 +381,7 @@ So if you:
    rmove('foo/bar/baz', '/etc/');
    # "baz" is removed from foo/bar after it is successfully copied to /etc/
    
-   $File::Copy::Recursive::Remvbase = 1;
+   local $File::Copy::Recursive::Remvbase = 1;
    rmove('foo/bar/baz','/etc/');
    # if baz is successfully copied to /etc/ :
    # first "baz" is removed from foo/bar
@@ -455,6 +479,10 @@ It is already set to true or false dending on your system's support of symlinks 
     } else {
         print "Symlinks will not be preserved because your system does not support it\n";
     }
+
+If symlinks are being copied you can set $File::Copy::Recursive::BdTrgWrn to true to make it carp when it copies a link whose target does not exist. Its false by default.
+
+    local $File::Copy::Recursive::BdTrgWrn  = 1;
 
 =head2 Removing existing target file or directory before copying.
 
