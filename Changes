@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.31  Wed Jan 24 16:42:15 2007
+	- Fixed "Uninitialized value in -e ... line 196" problem. (Thanks Ben Thomas)
+	- Fixed similar issue in nearby code (use of $_[0] instead of $org)
+	- removed pointless at best, vague problem at best !-e readlink() check from symlink patch from 21267 introduced in 0.26
+
 0.30  Fri Dec  8 14:26:49 2006
     - Added $BdTrgWrn to quiet warnings by default (rt 23861)
     - added backwards compat for pre 5.6 perls (rt 21800)
