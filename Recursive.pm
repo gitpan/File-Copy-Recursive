@@ -20,7 +20,7 @@ use vars qw(
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.32';
+$VERSION = '0.33';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -76,7 +76,7 @@ my $move = sub {
       }
       if($RemvBase) {
          my ($volm, $path) = File::Spec->splitpath($_[0]);
-         pathrm(File::Spec->catpath($volm,$path), $ForcePth, $NoFtlPth) or return;
+         pathrm(File::Spec->catpath($volm,$path,''), $ForcePth, $NoFtlPth) or return;
       }
    }
   return wantarray ? @x : $x[0];
@@ -115,7 +115,7 @@ sub fcopy {
    }
    my ($volm, $path) = File::Spec->splitpath($_[1]);
    if($path && !-d $path) {
-      pathmk(File::Spec->catpath($volm,$path), $NoFtlPth);
+      pathmk(File::Spec->catpath($volm,$path,''), $NoFtlPth);
    }
    if( -l $_[0] && $CopyLink ) {
       carp "Copying a symlink ($_[0]) whose target does not exist" 
