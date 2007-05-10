@@ -1,5 +1,8 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.32 Wed May  9 20:56:55 2007
+	- rt 26459
+
 0.31  Wed Jan 24 16:42:15 2007
 	- Fixed "Uninitialized value in -e ... line 196" problem. (Thanks Ben Thomas)
 	- Fixed similar issue in nearby code (use of $_[0] instead of $org)

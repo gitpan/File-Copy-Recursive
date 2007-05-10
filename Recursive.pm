@@ -20,7 +20,7 @@ use vars qw(
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.31';
+$VERSION = '0.32';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -256,18 +256,28 @@ sub pathmk {
 
 sub pathempty {
    my $pth = shift; 
+
    return 2 if !-d $pth;
+
    opendir(PTH_DH, $pth) or return;
+
    for my $name (grep !/^\.+$/, readdir(PTH_DH)) {
       my ($name_ut) = $name =~ m{ (.*) }xms;
-      my $flpth = File::Spec->catdir($pth, $name_ut);
-      if(-d $flpth) {
-         pathrmdir($flpth) or return;
-      } else {
-         unlink $flpth or return;
+      my $flpth     = File::Spec->catdir($pth, $name_ut);
+
+      if( -l $flpth ) {
+	      unlink $flpth or return; 
+      }
+      elsif(-d $flpth) {
+          pathrmdir($flpth) or return;
+      } 
+      else {
+          unlink $flpth or return;
       }
    }
+
    closedir PTH_DH;
+
    1;
 }
 
@@ -283,7 +293,8 @@ sub pathrm {
       if(!shift()) {
          pathempty($cur) or return if $force;
          rmdir $cur or return;
-      } else {
+      } 
+      else {
          pathempty($cur) if $force;
          rmdir $cur;
       }
@@ -293,10 +304,17 @@ sub pathrm {
 }
 
 sub pathrmdir {
-   my $dir = shift;
-   return 2 if !-d $dir;
-   pathempty($dir) or return;
-   rmdir $dir or return;
+    my $dir = shift;
+    if( -e $dir ) {
+        return if !-d $dir;
+    }
+    else {
+        return 2;
+    }
+
+    pathempty($dir) or return;
+    
+    rmdir $dir or return;
 }
 
 1;
