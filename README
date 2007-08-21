@@ -1,14 +1,14 @@
-File/Copy/Recursive version 0.33
+File/Copy/Recursive version 0.34
 ================================
 
 This module has 3 functions, one to copy files only, one to copy directories 
 only and one to do either depending on the argument's type.
 
-The depth to which a directpry structure is copied can be set with:
+The depth to which a directory structure is copied can be set with:
 
  $File::Copy::Recursive::Maxdepth
 
-setting it back to false or non numeric value will turn it back to unliimited.
+setting it back to false or non numeric value will turn it back to unlimited.
 
 All functions attempt to preserve each copied file's mode unless you set
  $File::Copy::Recursive::KeepMode

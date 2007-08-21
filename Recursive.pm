@@ -20,7 +20,7 @@ use vars qw(
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.33';
+$VERSION = '0.34';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -39,13 +39,19 @@ $SkipFlop = 0;
 
 my $samecheck = sub {
    return if $^O eq 'MSWin32'; # need better way to check for this on winders...
+   return if @_ != 2 || !defined $_[0] || !defined $_[1];
+   return if $_[0] eq $_[1];
 
    my $one = '';
    if($PFSCheck) {
       $one    = join( '-', ( stat $_[0] )[0,1] ) || '';
       my $two = join( '-', ( stat $_[1] )[0,1] ) || '';
-      croak "$_[0] and $_[1] are identical" if $one eq $two && $one;
+      if ( $one eq $two && $one ) {
+          carp "$_[0] and $_[1] are identical";
+          return;
+      }
    }
+
    if(-d $_[0] && !$CopyLoop) {
       $one    = join( '-', ( stat $_[0] )[0,1] ) if !$one;
       my $abs = File::Spec->rel2abs($_[1]);
@@ -54,10 +60,17 @@ my $samecheck = sub {
          my $cur = File::Spec->catdir(@pth);
          last if !$cur; # probably not necessary, but nice to have just in case :)
          my $two = join( '-', ( stat $cur )[0,1] ) || '';
-         croak "Caught Deep Recursion Condition: $_[0] contains $_[1]" if $one eq $two && $one;
+         if ( $one eq $two && $one ) {
+             # $! = 62; # Too many levels of symbolic links
+             carp "Caught Deep Recursion Condition: $_[0] contains $_[1]";
+             return;
+         }
+      
          pop @pth;
       }
    }
+
+   return 1;
 };
 
 my $move = sub {
@@ -97,14 +110,14 @@ my $ok_todo_asper_condcopy = sub {
 };
 
 sub fcopy { 
-   $samecheck->(@_);
+   $samecheck->(@_) or return;
    if($RMTrgFil && (-d $_[1] || -e $_[1]) ) {
       my $trg = $_[1];
       if( -d $trg ) {
         my @trgx = File::Spec->splitpath( $_[0] );
         $trg = File::Spec->catfile( $_[1], $trgx[ $#trgx ] );
       }
-      $samecheck->($_[0], $trg);
+      $samecheck->($_[0], $trg) or return;
       if(-e $trg) {
          if($RMTrgFil == 1) {
             unlink $trg or carp "\$RMTrgFil failed: $!";
@@ -152,10 +165,12 @@ sub dircopy {
        $globstar = 1;
        $_zero = substr( $_zero, 0, ( length( $_zero ) - 1 ) );
    }
-   croak "$_zero and $_[1] are the same" if $_zero eq $_[1]; 
-   $samecheck->(@_);
-   croak "$_zero is not a directory" if !-d $_zero;
-   croak "$_[1] is not a directory" if -e $_[1] && !-d $_[1];
+
+   $samecheck->(  $_zero, $_[1] ) or return;
+   if ( !-d $_zero || ( -e $_[1] && !-d $_[1] ) ) {
+       $! = 20; 
+       return;
+   } 
 
    if(!-d $_[1]) {
       pathmk($_[1], $NoFtlPth) or return;
