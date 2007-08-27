@@ -20,7 +20,7 @@ use vars qw(
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.34';
+$VERSION = '0.35';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -38,7 +38,7 @@ $BdTrgWrn = 0;
 $SkipFlop = 0;
 
 my $samecheck = sub {
-   return if $^O eq 'MSWin32'; # need better way to check for this on winders...
+   return 1 if $^O eq 'MSWin32'; # need better way to check for this on winders...
    return if @_ != 2 || !defined $_[0] || !defined $_[1];
    return if $_[0] eq $_[1];
 

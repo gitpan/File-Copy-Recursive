@@ -1,5 +1,8 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.35  Mon Aug 27 16:18:53 2007
+	- fixed rt 29008
+	
 0.34  Tue Aug 21 09:41:05 2007
 	- samecheck return; instead of croak;
 	- remaining croak()'s to $! = .. return;
