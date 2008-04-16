@@ -20,7 +20,7 @@ use vars qw(
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.35';
+$VERSION = '0.36';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -199,9 +199,18 @@ sub dircopy {
       }
       $level++;
 
-      opendir(STR_DH, $str) or return;
-      my @files = grep( $_ ne '.' && $_ ne '..', readdir(STR_DH));
-      closedir STR_DH;
+      
+      my @files;
+      if ( $] < 5.006 ) {
+          opendir(STR_DH, $str) or return;
+          @files = grep( $_ ne '.' && $_ ne '..', readdir(STR_DH));
+          closedir STR_DH;
+      }
+      else {
+          opendir(my $str_dh, $str) or return;
+          @files = grep( $_ ne '.' && $_ ne '..', readdir($str_dh));
+          closedir $str_dh;
+      }
 
       for my $file (@files) {
           my ($file_ut) = $file =~ m{ (.*) }xms;
@@ -274,9 +283,18 @@ sub pathempty {
 
    return 2 if !-d $pth;
 
-   opendir(PTH_DH, $pth) or return;
-
-   for my $name (grep !/^\.+$/, readdir(PTH_DH)) {
+   my @names;
+   my $pth_dh;
+   if ( $] < 5.006 ) {
+       opendir(PTH_DH, $pth) or return;
+       @names = grep !/^\.+$/, readdir(PTH_DH);
+   }
+   else {
+       opendir($pth_dh, $pth) or return;
+       @names = grep !/^\.+$/, readdir($pth_dh);       
+   }
+   
+   for my $name (@names) {
       my ($name_ut) = $name =~ m{ (.*) }xms;
       my $flpth     = File::Spec->catdir($pth, $name_ut);
 
@@ -291,8 +309,13 @@ sub pathempty {
       }
    }
 
-   closedir PTH_DH;
-
+   if ( $] < 5.006 ) {
+       closedir PTH_DH;
+   }
+   else {
+       closedir $pth_dh;
+   }
+   
    1;
 }
 
