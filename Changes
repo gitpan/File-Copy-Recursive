@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.37  Thu Oct  9 11:52:54 2008
+    - rt 38959 POD fix ups
+    - improved rcopy() symlink logic and do &goto; to preserve the stack
+    - added "tests" to the TODO list, patches welcome!
+    
 0.36  Wed Apr 16 15:32:36 2008
     - made all bareword file handles be lexical variables if the perl is new enough to support it (5.6.0 and up, see 'Indirect Filehandles' in perlopentut)
 

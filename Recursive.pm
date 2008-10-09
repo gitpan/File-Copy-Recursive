@@ -20,7 +20,7 @@ use vars qw(
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.36';
+$VERSION = '0.37';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -146,8 +146,12 @@ sub fcopy {
 }
 
 sub rcopy { 
-    -d $_[0] || substr( $_[0], ( 1 * -1), 1) eq '*' ? dircopy(@_) 
-                                                    : fcopy(@_); 
+    if (-l $_[0] && $CopyLink) {
+        goto &fcopy;    
+    }
+    
+    goto &dircopy if -d $_[0] || substr( $_[0], ( 1 * -1), 1) eq '*';
+    goto &fcopy;
 }
 
 sub dircopy {
@@ -508,7 +512,7 @@ An optional second argument if true acts just like $File::Copy::Recursive::NoFtl
 =head4 pathrmdir()
 
 Same as rmdir() but it calls pathempty() first to recursively empty it first since rmdir can not remove a directory with contents.
-Just removes the top directory the path given insetad of the entire path like pathrm(). Return 2 if the given argument is not a directory.
+Just removes the top directory the path given instead of the entire path like pathrm(). Return 2 if given argument does not exist (IE its already gone). Return false if it exists but is not a directory.
 
 =head2 Preserving Mode
 
@@ -626,6 +630,8 @@ Add OO interface so you can have different behavior with different objects inste
 This will give better control in environments where behavior based on global variables is not very desireable.
 
 I'll add this after the latest verision has been out for a while with no new features or issues found :)
+
+Tests tests and more tests
 
 =head1 AUTHOR
 
