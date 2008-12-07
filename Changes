@@ -1,5 +1,10 @@
 Revision history for Perl extension File::Copy::Recursive.
 
+0.38  
+    - do rmove() symlink fixups like rcopy() from ver 0.37
+    - rt 29750 (added $DirPerms)
+    - Added requested rcopy_glob() && rmove_glob() for convenience
+    
 0.37  Thu Oct  9 11:52:54 2008
     - rt 38959 POD fix ups
     - improved rcopy() symlink logic and do &goto; to preserve the stack

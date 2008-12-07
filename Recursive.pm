@@ -14,13 +14,13 @@ use File::Spec; #not really needed because File::Copy already gets it, but for g
 use vars qw( 
     @ISA      @EXPORT_OK $VERSION  $MaxDepth $KeepMode $CPRFComp $CopyLink 
     $PFSCheck $RemvBase $NoFtlPth  $ForcePth $CopyLoop $RMTrgFil $RMTrgDir 
-    $CondCopy $BdTrgWrn $SkipFlop
+    $CondCopy $BdTrgWrn $SkipFlop  $DirPerms
 );
 
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(fcopy rcopy dircopy fmove rmove dirmove pathmk pathrm pathempty pathrmdir);
-$VERSION = '0.37';
+$VERSION = '0.38';
 
 $MaxDepth = 0;
 $KeepMode = 1;
@@ -36,6 +36,7 @@ $RMTrgDir = 0;
 $CondCopy = {};
 $BdTrgWrn = 0;
 $SkipFlop = 0;
+$DirPerms = 0777; 
 
 my $samecheck = sub {
    return 1 if $^O eq 'MSWin32'; # need better way to check for this on winders...
@@ -71,6 +72,20 @@ my $samecheck = sub {
    }
 
    return 1;
+};
+
+my $glob = sub {
+    my ($do, $src_glob, @args) = @_;
+    
+    local $CPRFComp = 1;
+    
+    my @rt;
+    for my $path ( glob($src_glob) ) {
+        my @call = [$do->($path, @args)] or return;
+        push @rt, \@call;
+    }
+    
+    return @rt;
 };
 
 my $move = sub {
@@ -154,6 +169,10 @@ sub rcopy {
     goto &fcopy;
 }
 
+sub rcopy_glob {
+    $glob->(\&rcopy, @_);
+}
+
 sub dircopy {
    if($RMTrgDir && -d $_[1]) {
       if($RMTrgDir == 1) {
@@ -195,7 +214,9 @@ sub dircopy {
       my ($str,$end,$buf) = @_;
       $filen++ if $end eq $baseend; 
       $dirn++ if $end eq $baseend;
-      mkdir $end or return if !-d $end;
+      
+      $DirPerms = oct($DirPerms) if substr($DirPerms,0,1) eq '0';
+      mkdir($end,$DirPerms) or return if !-d $end;
       chmod scalar((stat($str))[2]), $end if $KeepMode;
       if($MaxDepth && $MaxDepth =~ m/^\d+$/ && $level >= $MaxDepth) {
          return ($filen,$dirn,$level) if wantarray;
@@ -256,11 +277,16 @@ sub dircopy {
 sub fmove { $move->(1, @_) } 
 
 sub rmove { 
-    my $_zero = shift;
-    $_zero = substr( $_zero, 0, ( length( $_zero ) - 1 ) )
-        if substr( $_[0], ( 1 * -1), 1) eq '*';
+    if (-l $_[0] && $CopyLink) {
+        goto &fmove;    
+    }
+    
+    goto &dirmove if -d $_[0] || substr( $_[0], ( 1 * -1), 1) eq '*';
+    goto &fmove;
+}
 
-    -d $_zero ? dirmove($_zero, @_) : fmove($_zero, @_);
+sub rmove_glob {
+    $glob->(\&rmove, @_);
 }
 
 sub dirmove { $move->(0, @_) }
@@ -275,8 +301,9 @@ sub pathmk {
       $zer = 1;
    }
    for($zer..$#parts) {
-      mkdir $pth or return if !-d $pth && !$nofatal;
-      mkdir $pth if !-d $pth && $nofatal;
+      $DirPerms = oct($DirPerms) if substr($DirPerms,0,1) eq '0';
+      mkdir($pth,$DirPerms) or return if !-d $pth && !$nofatal;
+      mkdir($pth,$DirPerms) if !-d $pth && $nofatal;
       $pth = File::Spec->catdir($pth, $parts[$_ + 1]) unless $_ == $#parts;
    }
    1;
@@ -378,6 +405,9 @@ File::Copy::Recursive - Perl extension for recursively copying files and directo
   fmove($orig,$new[,$buf]) or die $!;
   rmove($orig,$new[,$buf]) or die $!;
   dirmove($orig,$new[,$buf]) or die $!;
+  
+  rcopy_glob("orig/stuff-*", $trg [, $buf]) or die $!;
+  rmove_glob("orig/stuff-*", $trg [,$buf]) or die $!;
 
 =head1 DESCRIPTION
 
@@ -420,6 +450,14 @@ This function will allow you to specify a file *or* directory. It calls fcopy() 
 If you call rcopy() (or fcopy() for that matter) on a file in list context, the values will be 1,0,0 since no directories and no depth are used. 
 This is important becasue if its a directory in list context and there is only the initial directory the return value is 1,1,1.
 
+=head2 rcopy_glob()
+
+This function lets you specify a pattern suitable for perl's glob() as the first argument. Subsequently each path returned by perl's glob() gets rcopy()ied.
+
+It returns and array whose items are array refs that contain the return value of each rcopy() call.
+
+It forces behavior as if $File::Copy::Recursive::CPRFComp is true.
+
 =head2 fmove()
 
 Copies the file then removes the original. You can manage the path the original file is in according to $RemvBase.
@@ -431,6 +469,10 @@ Uses dircopy() to copy the directory then removes the original. You can manage t
 =head2 rmove()
 
 Like rcopy() but calls fmove() or dirmove() instead.
+
+=head2 rmove_glob()
+
+Like rcopy_glob() but calls rmove() instead of rcopy()
 
 =head3 $RemvBase
 
@@ -459,6 +501,12 @@ Default is false. If set to true  rmdir(), mkdir(), and pathempty() calls in pat
 
 If its set to true they just silently go about their business regardless. This isn't a good idea but its there if you want it.
 
+=head3 $DirPerms
+
+Mode to pass to any mkdir() calls. Defaults to 0777 as per umask()'s POD. Explicitly having this allows older perls to be able to use FCR and might add a bit of flexibility for you.
+
+Any value you set it to should be suitable for oct()
+
 =head3 Path functions
 
 These functions exist soley because they were necessary for the move and copy functions to have the features they do and not because they are of themselves the purpose of this module. That being said, here is how they work so you can understand how the copy and move funtions work and use them by themselves if you wish.
@@ -483,7 +531,7 @@ An optional second argument makes it call pathempty() before any rmdir()'s when 
   File::Copy::Recursive::pathrm('foo/bar/baz', 1) or die $!;
   # foo no longer exists
 
-Same as:
+Same as:PFSCheck
 
   File::Copy::Recursive::pathempty('foo/bar/baz') or die $!;
   rmdir 'foo/bar/baz' or die $!;
@@ -626,12 +674,13 @@ L<File::Copy> L<File::Spec>
 
 =head1 TO DO
 
-Add OO interface so you can have different behavior with different objects instead of relying on global variables.
-This will give better control in environments where behavior based on global variables is not very desireable.
+I am currently working on and reviewing some other modules to use in the new interface so we can lose the horrid globals as well as some other undesirable traits and also more easily make available some long standing requests.
+
+Tests will be easier to do with the new interface and hence the testing focus will shift to the new interface and aim to be comprehensive.
+
+The old interface will work, it just won't be brought in until it is used, so it will add no overhead for users of the new interface.
 
 I'll add this after the latest verision has been out for a while with no new features or issues found :)
-
-Tests tests and more tests
 
 =head1 AUTHOR
 
